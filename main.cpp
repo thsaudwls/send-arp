@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
 
 	s_Mac_Add atkr_mac = getMacAddress(argv[1]);
 
-	for (int i = 1; i < (argc - 2) / 2; i++) {
+	for (int i = 1; i <= (argc - 2) / 2; i++) {
 		char attacker_mac[18] = "";
 		sprintf(attacker_mac, "%02x:%02x:%02x:%02x:%02x:%02x", atkr_mac.addr[0], atkr_mac.addr[1], atkr_mac.addr[2], atkr_mac.addr[3], atkr_mac.addr[4], atkr_mac.addr[5]);
 
