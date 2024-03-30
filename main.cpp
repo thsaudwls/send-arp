@@ -119,8 +119,6 @@ int main(int argc, char* argv[]) {
 
 		EthArpPacket* victim_packet = reinterpret_cast<EthArpPacket*>(const_cast<u_char*>(packet_data));
 
-		printf()
-		
 		if (victim_packet->arp_.sip_ == packet.arp_.tip_ && victim_packet->eth_.type_ == htons(EthHdr::Arp) && victim_packet->arp_.op_ == htons(ArpHdr::Reply)) {
 			Mac victim_mac = victim_packet->arp_.smac_;
 			printf("Victim's MAC address: %s", std::string(victim_mac).c_str());
